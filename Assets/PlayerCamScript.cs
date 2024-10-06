@@ -6,7 +6,7 @@ public class PlayerCamScript : MonoBehaviour
 {
     public Transform _player;
     public GameObject _avatar;
-    float _distance = 10f; // расстояние от камеры до player
+    float _distance = 6f; // расстояние от камеры до player
 
     public float sensetivityX;
     public float sensetivityY;
@@ -20,6 +20,8 @@ public class PlayerCamScript : MonoBehaviour
     private Vector3 _previousPlayerPosition;
 
     public Camera showingCamera;
+
+    public float _playerHeight;
 
     void Start()
     {
@@ -35,14 +37,14 @@ public class PlayerCamScript : MonoBehaviour
             if (_distance < 0)
                 _distance = 0;
 
-            if (_distance < 0.5f)
+            if (_distance < 1f)
                 _avatar.SetActive(false);
         }
 
         if (Input.GetKey(KeyCode.KeypadMinus))
         {
             _distance += 0.3f;
-            if (_distance >= 0.5f)
+            if (_distance >= 1f)
                 _avatar.SetActive(true);
         }
 
@@ -77,12 +79,14 @@ public class PlayerCamScript : MonoBehaviour
                     _previousPlayerPosition = _player.transform.position;
                 }
 
+        Vector3 upper = new Vector3(0, _playerHeight, 0);
+
         float subDistance = _distance;
         RaycastHit hit;
-        if (Physics.Raycast(_player.position, -transform.forward, out hit, _distance))
-            subDistance = hit.distance - 0.1f;
+        if (Physics.Raycast(_player.position + upper, -transform.forward, out hit, _distance))
+            subDistance = hit.distance - 0.02f;
 
-        transform.position = _player.position - transform.forward * subDistance;
+        transform.position = _player.position + upper - transform.forward * subDistance;
     }
 
     public void Rotate(float v)
