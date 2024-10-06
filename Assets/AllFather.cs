@@ -24,6 +24,7 @@ public class AllFather : MonoBehaviour
 	public float _savedPlayerXRot;
 	public float _savedPlayerYRot;
 	public List<string> _savedLoadedScenesNames;
+	public int _seed;
 
 	public int _enemyBulletSparklesCount;
 

@@ -4,9 +4,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Runtime.InteropServices;
 
 public class Inventory : MonoBehaviour
 {
+	[DllImport("user32.dll")]
+	private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+	[DllImport("user32.dll")]
+	private static extern IntPtr GetActiveWindow();
+
 	[Header("Keybinds")]
 
 	public GameObject inventoryPanel;
@@ -70,7 +76,7 @@ public class Inventory : MonoBehaviour
 	public float showingStartTime;
 	public AudioManager _audioManager;
 
-	public GameObject _playerObject;
+	public GameObject _player;
 
 	public bool _marketOpened;
 
@@ -87,6 +93,8 @@ public class Inventory : MonoBehaviour
 	bool _isEscPressed;
 
 	public bool _somethingClicked;
+
+	public PlayerCamScript _playerCamScript;
 
 	public void SaveTheSave()
 	{
@@ -113,7 +121,7 @@ public class Inventory : MonoBehaviour
 		}
 		Visualize();
 	}
-	 
+
 	public int CountOfItem(string name)
 	{
 		int count = 0;
@@ -162,6 +170,9 @@ public class Inventory : MonoBehaviour
 
 	public void Start()
 	{
+		Screen.SetResolution(Display.main.systemWidth, Display.main.systemHeight, Screen.fullScreen);
+		Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
+
 		_audioManager.muted = true;
 
 		items = new IsItem[36]; //
@@ -235,10 +246,9 @@ public class Inventory : MonoBehaviour
 		if (!_marketOpened && !opened)
 		{
 			bool clickable = false;
-
-			Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
+			Vector3 upper = new Vector3(0, _playerCamScript._playerHeight, 0);
 			RaycastHit hit;
-			if (Physics.Raycast(ray, out hit, 7f, notTransperent))
+			if (Physics.Raycast(_player.transform.position + upper, _camera.transform.forward, out hit, 7f, notTransperent))
 			{
 				Locker locker = hit.collider.gameObject.GetComponent<Locker>();
 				if (locker != null)
@@ -450,8 +460,7 @@ public class Inventory : MonoBehaviour
 
 				if (Input.GetKeyUp(KeyCode.Escape))
 				{
-					Screen.fullScreen = false;
-					Screen.SetResolution(Screen.width / 2, Screen.height / 2, false);
+					ShowWindow(GetActiveWindow(), 2);
 					_isEscPressed = false;
 				}
 
@@ -469,7 +478,7 @@ public class Inventory : MonoBehaviour
 					_camera.fieldOfView = 76; ///////////////////////////////////
 			}
 
-			if (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Q) || 
+			if (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Q) ||
 				(Input.GetMouseButtonDown(0) && !_somethingClicked))
 			{
 				if (items[selectedId] != null)
@@ -577,9 +586,9 @@ public class Inventory : MonoBehaviour
 
 		if (!_marketOpened && !opened)
 		{
-			Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
+			Vector3 upper = new Vector3(0, _playerCamScript._playerHeight, 0);
 			RaycastHit hit;
-			if (Physics.Raycast(ray, out hit, 7f, notTransperent))
+			if (Physics.Raycast(_player.transform.position + upper, _camera.transform.forward, out hit, 7f, notTransperent))
 			{
 				Locker locker = hit.collider.gameObject.GetComponent<Locker>();
 				if (locker != null)
@@ -590,39 +599,10 @@ public class Inventory : MonoBehaviour
 						_audioManager.Play("notEnoughCash", 1);
 				}
 
-				FrerardHolder fh = hit.collider.gameObject.GetComponent<FrerardHolder>();
-				if (fh != null)
-				{
-					if (items[selectedId] != null)
-					{
-						FrerardObject fo = items[selectedId].obj.GetComponent<FrerardObject>();
-						if (fo != null)
-						{
-							fh.Take(items[selectedId]);
-							items[selectedId] = null;
-							Visualise(selectedId);
-							return;
-						}
-						else
-							fh.Take(null);
-					}
-					else
-					{
-						fh.Take(null);
-					}
-				}
-
 				IsTrader trader = hit.collider.gameObject.GetComponent<IsTrader>();
 				if (trader != null)
 				{
 					trader.OpenMarket();
-					return;
-				}
-
-				Door door = hit.collider.gameObject.GetComponent<Door>();
-				if (door != null)
-				{
-					door.Go(_playerObject);
 					return;
 				}
 
@@ -657,7 +637,7 @@ public class Inventory : MonoBehaviour
 				}
 			}
 
-			if (Physics.Raycast(ray, out hit, 7f, notTransperent))
+			if (Physics.Raycast(_player.transform.position + upper, _camera.transform.forward, out hit, 7f, notTransperent))
 			{
 				IsDoor isDoor = hit.collider.gameObject.GetComponent<IsDoor>();
 				if (isDoor != null)
@@ -667,7 +647,7 @@ public class Inventory : MonoBehaviour
 				}
 			}
 
-			if (Physics.Raycast(ray, out hit, 7f, notTransperent))
+			if (Physics.Raycast(_player.transform.position + upper, _camera.transform.forward, out hit, 7f, notTransperent))
 			{
 				IsShuffle isShuffle = hit.collider.gameObject.GetComponent<IsShuffle>();
 				if (isShuffle != null)
@@ -779,8 +759,8 @@ public class Inventory : MonoBehaviour
 
 				_showingItem = Instantiate(items[id].obj, position + direction + offsetV, Quaternion.identity);
 
-				_showingItem.transform.eulerAngles = startRotation; 
-				 
+				_showingItem.transform.eulerAngles = startRotation;
+
 				_audioManager.Play(audioName, 1);
 
 				_showingItem.GetComponent<Renderer>().enabled = true;
@@ -813,7 +793,8 @@ public class Inventory : MonoBehaviour
 	{
 		if (items[id] != null)
 		{
-			Vector3 position = _playerObject.transform.position;
+			Vector3 upper = new Vector3(0, _playerCamScript._playerHeight, 0);
+			Vector3 position = _player.transform.position + upper;
 			Vector3 direction = _camera.transform.forward;
 
 			int buffer = items[id].count;
@@ -853,7 +834,7 @@ public class Inventory : MonoBehaviour
 			}
 			else
 			{
-				Cursor.lockState = CursorLockMode.Locked; 
+				Cursor.lockState = CursorLockMode.Locked;
 				SelectItem(smallSelectedId, false);
 				ultraSelectedId = -1;
 				selectorPanelPlus.SetActive(false); //
@@ -869,7 +850,7 @@ public class Inventory : MonoBehaviour
 	}
 
 	public void SelectItem(int id, bool permanently)
-	{	
+	{
 		throwing = false;
 		throwPanel.transform.localScale = new Vector3(0, 0, 0);
 		throwPanelBlack.transform.localScale = new Vector3(0, 0, 0);
@@ -913,7 +894,7 @@ public class Inventory : MonoBehaviour
 			float s = 2.6f;
 
 			selectorPanel.transform.SetParent(inventoryPanelParentBig.transform);
-			
+
 			selectorPanel.transform.SetSiblingIndex(1);
 
 			selectorPanel.transform.position = panels[id].transform.position;
@@ -956,7 +937,7 @@ public class Inventory : MonoBehaviour
 				}
 				else if (items[id] != null)
 				{
-					
+
 					//if (id == ultraSelectedId)
 					{
 						float f = 1.8f;
